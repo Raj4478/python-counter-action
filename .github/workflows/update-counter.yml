@@ -2,8 +2,8 @@ name: Update counter
 
 on:
   schedule:
-    # 09:00 and 21:00 IST (UTC+05:30)
-    - cron: "30 3,15 * * *"
+    # Run once daily at 09:00 IST (03:30 UTC).
+    - cron: "30 3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -27,17 +27,21 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Increment counter
-        run: python counter.py
-
-      - name: Commit updated counter
+      - name: Create a random number of commits
+        env:
+          COMMIT_AUTHOR_NAME: ${{ github.repository_owner }}
+          COMMIT_AUTHOR_EMAIL: ${{ github.repository_owner_id }}+${{ github.repository_owner }}@users.noreply.github.com
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add counter.txt
-          if git diff --cached --quiet; then
-            echo "No counter change to commit."
-            exit 0
-          fi
-          git commit -m "chore: update counter"
+          git config user.name "$COMMIT_AUTHOR_NAME"
+          git config user.email "$COMMIT_AUTHOR_EMAIL"
+
+          commit_count=$((RANDOM % 6 + 1))
+          echo "Creating $commit_count counter commits today."
+
+          for commit_number in $(seq 1 "$commit_count"); do
+            python counter.py
+            git add counter.txt
+            git commit -m "chore: update counter ($commit_number/$commit_count)"
+          done
+
           git push
